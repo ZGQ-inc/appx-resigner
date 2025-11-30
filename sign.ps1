@@ -6,7 +6,9 @@ $ToolsDir = Join-Path $CurrentDir "SDKTools_Temp"
 $WorkDir = Join-Path $CurrentDir "Workspace_Temp"
 $FinalOutputDir = Join-Path $CurrentDir "signed"
 
-if (-not (Test-Path $FinalOutputDir)) { New-Item -Path $FinalOutputDir -ItemType Directory | Out-Null }
+# FIX: Create directories explicitly at start
+if (-not (Test-Path $FinalOutputDir)) { New-Item -Path $FinalOutputDir -ItemType Directory -Force | Out-Null }
+if (-not (Test-Path $WorkDir)) { New-Item -Path $WorkDir -ItemType Directory -Force | Out-Null }
 
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "   Windows Appx Resigner (Cloud/Local)"
@@ -22,7 +24,7 @@ function Get-Tools {
     }
 
     Write-Host " -> Downloading SDK Tools..." -ForegroundColor Yellow
-    if (-not (Test-Path $ToolsDir)) { New-Item -Path $ToolsDir -ItemType Directory | Out-Null }
+    if (-not (Test-Path $ToolsDir)) { New-Item -Path $ToolsDir -ItemType Directory -Force | Out-Null }
     $ZipPath = Join-Path $ToolsDir "sdk_tools.zip"
     
     try {
@@ -60,6 +62,9 @@ function Process-Package {
     if ($Extension -match "bundle") {
         Write-Host "    [Bundle] Extracting x64 component..." -ForegroundColor Yellow
         
+        # FIX: Ensure WorkDir exists before copying
+        if (-not (Test-Path $WorkDir)) { New-Item -Path $WorkDir -ItemType Directory -Force | Out-Null }
+
         $TempZipPath = Join-Path $WorkDir "temp_${RandId}.zip"
         Copy-Item -Path $SourceFile -Destination $TempZipPath
         
