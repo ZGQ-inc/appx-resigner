@@ -62,7 +62,6 @@ function Process-Package {
     if ($Extension -match "bundle") {
         Write-Host "    [Bundle] Extracting x64 component..." -ForegroundColor Yellow
         
-        # FIX: Ensure WorkDir exists before copying
         if (-not (Test-Path $WorkDir)) { New-Item -Path $WorkDir -ItemType Directory -Force | Out-Null }
 
         $TempZipPath = Join-Path $WorkDir "temp_${RandId}.zip"
