@@ -2,8 +2,8 @@
 
 $CurrentDir = (Get-Location).Path
 $NuGetUrl = "https://www.nuget.org/api/v2/package/Microsoft.Windows.SDK.BuildTools/"
-$ToolsDir = Join-Path $CurrentDir "SDKTools_Temp"
-$WorkDir = Join-Path $CurrentDir "Workspace_Temp"
+$ToolsDir = Join-Path $CurrentDir "SDKTools"
+$WorkDir = Join-Path $CurrentDir "Workspace"
 $FinalOutputDir = Join-Path $CurrentDir "signed"
 
 if (-not (Test-Path $FinalOutputDir)) { New-Item -Path $FinalOutputDir -ItemType Directory -Force | Out-Null }
@@ -11,7 +11,6 @@ if (-not (Test-Path $WorkDir)) { New-Item -Path $WorkDir -ItemType Directory -Fo
 
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "   Windows Appx Resigner"
-Write-Host "   Working Dir: $CurrentDir"
 Write-Host "==========================================" -ForegroundColor Cyan
 
 function Get-Tools {
@@ -23,7 +22,7 @@ function Get-Tools {
         return @{ MakeAppx = $MakeAppx.FullName; SignTool = $SignTool.FullName }
     }
 
-    Write-Host " -> Downloading SDK Tools..." -ForegroundColor Yellow
+    Write-Host "Downloading SDK Tools..." -ForegroundColor Yellow
     if (Test-Path $ToolsDir) { Remove-Item $ToolsDir -Recurse -Force }
     New-Item -Path $ToolsDir -ItemType Directory -Force | Out-Null
     
@@ -34,16 +33,16 @@ function Get-Tools {
         throw "Failed to download SDK Tools. Check internet connection."
     }
 
-    Write-Host " -> Extracting tools..." -ForegroundColor DarkGray
+    Write-Host "Extracting tools..." -ForegroundColor DarkGray
     Expand-Archive -Path $ZipPath -DestinationPath $ToolsDir -Force
     Remove-Item $ZipPath -Force
 
-    Write-Host " -> Locating x64 binaries..." -ForegroundColor Yellow
+    Write-Host "Locating x64 binaries..." -ForegroundColor Yellow
     $MakeAppx = Get-ChildItem -Path $ToolsDir -Filter "makeappx.exe" -Recurse | Where-Object { $_.FullName -like "*\x64\*" } | Select-Object -First 1
     $SignTool = Get-ChildItem -Path $ToolsDir -Filter "signtool.exe" -Recurse | Where-Object { $_.FullName -like "*\x64\*" } | Select-Object -First 1
 
     if (-not $MakeAppx -or -not $SignTool) { 
-        throw "Failed to locate x64 tools in the downloaded package." 
+        throw "Failed to locate x64 tools." 
     }
 
     $Env:Path += ";$($MakeAppx.DirectoryName)"
@@ -136,7 +135,7 @@ try {
     if ($Files) {
         foreach ($File in $Files) { Process-Package -SourceFile $File.FullName -Tools $Tools }
     } else {
-        Write-Warning "No .appx/.msix/.bundle files found in current directory."
+        Write-Warning "No appx/msix/bundle files found in current directory."
     }
 }
 catch {
