@@ -6,27 +6,28 @@ $ToolsDir = Join-Path $CurrentDir "SDKTools_Temp"
 $WorkDir = Join-Path $CurrentDir "Workspace_Temp"
 $FinalOutputDir = Join-Path $CurrentDir "signed"
 
-# FIX: Create directories explicitly at start
 if (-not (Test-Path $FinalOutputDir)) { New-Item -Path $FinalOutputDir -ItemType Directory -Force | Out-Null }
 if (-not (Test-Path $WorkDir)) { New-Item -Path $WorkDir -ItemType Directory -Force | Out-Null }
 
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "   Windows Appx Resigner (Cloud/Local)"
+Write-Host "   Windows Appx Resigner"
 Write-Host "   Working Dir: $CurrentDir"
 Write-Host "==========================================" -ForegroundColor Cyan
 
 function Get-Tools {
-    $MakeAppx = Get-ChildItem -Path $ToolsDir -Filter "makeappx.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-    $SignTool = Get-ChildItem -Path $ToolsDir -Filter "signtool.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    $MakeAppx = Get-ChildItem -Path $ToolsDir -Filter "makeappx.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*\x64\*" } | Select-Object -First 1
+    $SignTool = Get-ChildItem -Path $ToolsDir -Filter "signtool.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*\x64\*" } | Select-Object -First 1
 
     if ($MakeAppx -and $SignTool) {
+        Write-Host " -> Found x64 Tools: $($MakeAppx.FullName)" -ForegroundColor DarkGray
         return @{ MakeAppx = $MakeAppx.FullName; SignTool = $SignTool.FullName }
     }
 
     Write-Host " -> Downloading SDK Tools..." -ForegroundColor Yellow
-    if (-not (Test-Path $ToolsDir)) { New-Item -Path $ToolsDir -ItemType Directory -Force | Out-Null }
-    $ZipPath = Join-Path $ToolsDir "sdk_tools.zip"
+    if (Test-Path $ToolsDir) { Remove-Item $ToolsDir -Recurse -Force }
+    New-Item -Path $ToolsDir -ItemType Directory -Force | Out-Null
     
+    $ZipPath = Join-Path $ToolsDir "sdk_tools.zip"
     try {
         Invoke-WebRequest -Uri $NuGetUrl -OutFile $ZipPath -UseBasicParsing
     } catch {
@@ -37,10 +38,13 @@ function Get-Tools {
     Expand-Archive -Path $ZipPath -DestinationPath $ToolsDir -Force
     Remove-Item $ZipPath -Force
 
-    $MakeAppx = Get-ChildItem -Path $ToolsDir -Filter "makeappx.exe" -Recurse | Where-Object { $_.DirectoryName -like "*x64*" } | Select-Object -First 1
-    $SignTool = Get-ChildItem -Path $ToolsDir -Filter "signtool.exe" -Recurse | Where-Object { $_.DirectoryName -like "*x64*" } | Select-Object -First 1
+    Write-Host " -> Locating x64 binaries..." -ForegroundColor Yellow
+    $MakeAppx = Get-ChildItem -Path $ToolsDir -Filter "makeappx.exe" -Recurse | Where-Object { $_.FullName -like "*\x64\*" } | Select-Object -First 1
+    $SignTool = Get-ChildItem -Path $ToolsDir -Filter "signtool.exe" -Recurse | Where-Object { $_.FullName -like "*\x64\*" } | Select-Object -First 1
 
-    if (-not $MakeAppx -or -not $SignTool) { throw "Failed to locate makeappx or signtool." }
+    if (-not $MakeAppx -or -not $SignTool) { 
+        throw "Failed to locate x64 tools in the downloaded package." 
+    }
 
     $Env:Path += ";$($MakeAppx.DirectoryName)"
     
@@ -63,7 +67,6 @@ function Process-Package {
         Write-Host "    [Bundle] Extracting x64 component..." -ForegroundColor Yellow
         
         if (-not (Test-Path $WorkDir)) { New-Item -Path $WorkDir -ItemType Directory -Force | Out-Null }
-
         $TempZipPath = Join-Path $WorkDir "temp_${RandId}.zip"
         Copy-Item -Path $SourceFile -Destination $TempZipPath
         
@@ -90,7 +93,7 @@ function Process-Package {
 
     $UnpackArgs = "unpack /p `"$SourceFile`" /d `"$UnpackDir`" /o"
     $p = Start-Process -FilePath $Tools.MakeAppx -ArgumentList $UnpackArgs -Wait -NoNewWindow -PassThru
-    if ($p.ExitCode -ne 0) { Write-Error "    [!] Unpack failed"; return }
+    if ($p.ExitCode -ne 0) { Write-Error "    [!] Unpack failed. Code: $($p.ExitCode)"; return }
 
     if (-not (Test-Path "$UnpackDir\AppxManifest.xml")) { return }
 
