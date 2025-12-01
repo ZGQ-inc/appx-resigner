@@ -82,7 +82,7 @@ function Process-Artifact {
     if ([string]::IsNullOrEmpty($CertSubject)) {
         $PublisherName = "CN=Resigned_${BaseName}"
         $CertSubject = $PublisherName
-        $PfxPath = Join-Path $FinalOutputDir "${BaseName}_SignKey.pfx"
+        $PfxPath = Join-Path $TaskWorkDir "${BaseName}_SignKey.pfx"
         $CerPath = Join-Path $FinalOutputDir "${BaseName}_Root.cer"
         
         Write-Host "Generating Certificate ($PublisherName)..." -ForegroundColor DarkGray
