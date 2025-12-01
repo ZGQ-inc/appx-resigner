@@ -23,7 +23,7 @@ function Get-Tools {
     if ($SysArch -match "ARM") { $TargetArch = "arm64" }
     elseif ($SysArch -eq "x86") { $TargetArch = "x86" }
     
-    Write-Host "Detected System Architecture: $SysArch (Using tools for: $TargetArch)" -ForegroundColor DarkGray
+    Write-Host "Detected System Arch: $SysArch ($TargetArch)" -ForegroundColor DarkGray
 
     $MakeAppx = Get-ChildItem -Path $ToolsDir -Filter "makeappx.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "\\$TargetArch\\" } | Select-Object -First 1
     $SignTool = Get-ChildItem -Path $ToolsDir -Filter "signtool.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match "\\$TargetArch\\" } | Select-Object -First 1
